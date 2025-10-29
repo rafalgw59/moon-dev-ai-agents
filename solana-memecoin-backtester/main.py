@@ -36,7 +36,8 @@ def print_menu():
     print("5. View dashboard")
     print("6. Batch test multiple strategies")
     print("7. View top strategies")
-    print("8. Exit")
+    print("8. 🚀 RUN AI SWARM (parallel strategy discovery with anti-overfitting)")
+    print("9. Exit")
     print()
 
 
@@ -374,6 +375,81 @@ def view_top_strategies():
         print(f"\n❌ Error: {e}")
 
 
+def run_swarm_menu():
+    """Run AI swarm for parallel strategy discovery"""
+    print("\n" + "=" * 70)
+    print("🚀 AI SWARM - PARALLEL STRATEGY DISCOVERY")
+    print("=" * 70)
+
+    print(f"\nSwarm Configuration:")
+    print(f"  Max Threads: {config.SWARM_MAX_THREADS}")
+    print(f"  Walk-Forward Analysis: {config.SWARM_WALKFORWARD_TRAIN_PCT*100:.0f}% train / {(1-config.SWARM_WALKFORWARD_TRAIN_PCT)*100:.0f}% test")
+    print(f"  Multi-Token Testing: {'ENABLED' if config.SWARM_MULTI_TOKEN_TEST else 'DISABLED'}")
+    print(f"  Cost Optimized: {config.SWARM_COST_OPTIMIZED}")
+
+    print("\n⚠️  ANTI-OVERFITTING MEASURES:")
+    print("  ✓ Walk-forward analysis (train/test split)")
+    print("  ✓ Out-of-sample validation")
+    print("  ✓ Multi-token testing (if enabled)")
+    print("  ✓ Minimum walkforward ratio: 0.8")
+
+    print("\n" + "-" * 70)
+
+    num_ideas = input("\nHow many strategy ideas to generate? (default 5): ").strip()
+    num_ideas = int(num_ideas) if num_ideas.isdigit() else 5
+
+    print(f"\n📝 Please provide {num_ideas} strategy ideas:")
+    print("   (Enter each idea on a new line, press Enter twice when done)\n")
+
+    ideas = []
+    for i in range(num_ideas):
+        print(f"Idea {i+1}:")
+        idea_lines = []
+        empty_count = 0
+
+        while empty_count < 2:
+            line = input()
+            if line:
+                idea_lines.append(line)
+                empty_count = 0
+            else:
+                empty_count += 1
+
+        idea = '\n'.join(idea_lines)
+        if idea.strip():
+            ideas.append(idea.strip())
+            print(f"✓ Idea {i+1} captured\n")
+
+    if not ideas:
+        print("❌ No ideas provided")
+        return
+
+    print(f"\n📊 Ready to process {len(ideas)} ideas with swarm")
+    confirm = input("Start swarm? (y/n): ").strip().lower()
+
+    if confirm != 'y':
+        print("❌ Cancelled")
+        return
+
+    try:
+        from src.swarm_runner import SwarmRunner
+
+        swarm = SwarmRunner(
+            max_threads=config.SWARM_MAX_THREADS,
+            cost_optimized=config.SWARM_COST_OPTIMIZED
+        )
+
+        swarm.run_swarm(ideas)
+
+        print("\n✅ Swarm completed! Check results in dashboard or CSV.")
+        print(f"   Results CSV: {swarm.swarm_results_csv}")
+
+    except Exception as e:
+        print(f"\n❌ Swarm error: {e}")
+        import traceback
+        traceback.print_exc()
+
+
 def main():
     """Main CLI loop"""
     # Load environment variables
@@ -420,10 +496,12 @@ def main():
         elif choice == '7':
             view_top_strategies()
         elif choice == '8':
+            run_swarm_menu()
+        elif choice == '9':
             print("\n👋 Goodbye!")
             sys.exit(0)
         else:
-            print("\n❌ Invalid choice. Please enter 1-8.")
+            print("\n❌ Invalid choice. Please enter 1-9.")
 
         input("\nPress Enter to continue...")
 

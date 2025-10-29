@@ -133,6 +133,34 @@ LOG_TO_FILE = True
 LOG_FILE = 'backtester.log'
 
 # ============================================================================
+# SWARM SETTINGS (AI Agent Swarm for Strategy Discovery)
+# ============================================================================
+
+# Maximum parallel threads for swarm
+SWARM_MAX_THREADS = 5  # Adjust based on your API rate limits
+
+# Walk-forward analysis settings (anti-overfitting)
+SWARM_WALKFORWARD_TRAIN_PCT = 0.7  # 70% training, 30% testing
+
+# Multi-token testing (test strategies on multiple tokens)
+SWARM_MULTI_TOKEN_TEST = True
+SWARM_TEST_TOKENS = [
+    'So11111111111111111111111111111111111111112',  # Wrapped SOL
+    # Add more token addresses to test strategies across multiple assets
+]
+
+# Cost optimization
+SWARM_COST_OPTIMIZED = True  # Use cheaper AI models (DeepSeek) for initial passes
+
+# Swarm result filtering (stricter than regular backtests)
+SWARM_MIN_RETURN_PCT = 15.0          # Higher bar for swarm results
+SWARM_MIN_WALKFORWARD_RATIO = 0.8    # Minimum 0.8 to avoid overfitting
+SWARM_MIN_SHARPE_RATIO = 1.0         # Higher quality strategies
+
+# Rate limiting for swarm
+SWARM_RATE_LIMIT_DELAY = 1.0  # Seconds between API calls per thread
+
+# ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
 
@@ -184,6 +212,13 @@ def validate_config():
 
     if INITIAL_CAPITAL <= 0:
         errors.append("INITIAL_CAPITAL must be positive")
+
+    # Swarm validation
+    if SWARM_MAX_THREADS < 1:
+        errors.append("SWARM_MAX_THREADS must be at least 1")
+
+    if not (0 < SWARM_WALKFORWARD_TRAIN_PCT < 1):
+        errors.append("SWARM_WALKFORWARD_TRAIN_PCT must be between 0 and 1")
 
     return errors
 
