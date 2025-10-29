@@ -114,17 +114,39 @@ class AIStrategyBuilder:
     def _research_phase(self, idea_text: str) -> str:
         """Phase 1: Analyze trading idea and extract strategy logic"""
 
-        system_prompt = """You are a professional quantitative trading analyst. Your task is to analyze trading strategy ideas and extract the key components in a structured format.
+        system_prompt = """You are a professional quantitative trading analyst specializing in HIGH-VOLATILITY MEMECOIN TRADING on Solana.
+
+CRITICAL CONTEXT - MEMECOIN CHARACTERISTICS:
+- Timeframe: 1min to 5min (memecoins pump in MINUTES, not hours)
+- Lifespan: Days to weeks (most don't last beyond 7 days)
+- Volatility: Extreme (50-500% moves in hours)
+- Liquidity: Low (2-10% slippage is normal)
+- Hold time: Minutes to hours (NOT days/weeks)
+- Risk/Reward: Asymmetric (one 10x covers many losses)
+
+AVOID THESE FOR MEMECOINS:
+❌ Long-term MAs (50/200 period) - token won't have that much data
+❌ Complex indicators (Ichimoku, Fibonacci) - too slow
+❌ Mean reversion (buying dips) - dips can be -90% permanent
+❌ Long hold times - community moves to next token
+
+PREFER THESE FOR MEMECOINS:
+✅ Volume-based signals (volume > 5x average)
+✅ Short-period indicators (5-20 periods max)
+✅ Momentum strategies (catch the pump)
+✅ Quick exits (profit targets + stops)
+✅ Time-based exits (max hold 5-30 minutes)
 
 Extract and organize:
-1. STRATEGY_NAME: A concise, descriptive name (e.g., "RSI_MACD_Momentum", "BollingerBreakout")
-2. INDICATORS: List all technical indicators needed (RSI, MACD, SMA, Bollinger Bands, ATR, etc.)
-3. ENTRY_CONDITIONS: Precise conditions for entering a trade
-4. EXIT_CONDITIONS: Precise conditions for exiting a trade
-5. RISK_MANAGEMENT: Stop-loss, take-profit, position sizing rules
-6. TIMEFRAME: Recommended timeframe (e.g., 15min, 1hour, 4hour)
+1. STRATEGY_NAME: A concise, descriptive name
+2. INDICATORS: List indicators (use SHORT periods: 5-20 max)
+3. ENTRY_CONDITIONS: Precise conditions (must include volume check)
+4. EXIT_CONDITIONS: Precise conditions (profit target + stop loss + time limit)
+5. RISK_MANAGEMENT: Aggressive stops (5-10%), big targets (30-100%+)
+6. TIMEFRAME: 1min or 5min ONLY (memecoins are fast)
+7. MAX_HOLD_TIME: Minutes, not hours (e.g., "5 minutes", "30 minutes")
 
-Be specific and quantitative. Output in clear, structured text format."""
+Be specific and quantitative. Focus on SPEED and VOLUME."""
 
         user_prompt = f"""Analyze this trading strategy idea and extract the components:
 
@@ -138,7 +160,15 @@ Provide a structured analysis with all key details."""
     def _backtest_phase(self, research: str, strategy_name: str) -> str:
         """Phase 2: Generate backtesting.py compatible code"""
 
-        system_prompt = """You are an expert Python developer specializing in backtesting.py library.
+        system_prompt = """You are an expert Python developer specializing in backtesting.py library for MEMECOIN TRADING.
+
+MEMECOIN-SPECIFIC REQUIREMENTS:
+⚡ SHORT PERIODS: Use 5-20 period indicators MAX (not 50/200)
+⚡ VOLUME CHECKS: Always include volume validation
+⚡ QUICK EXITS: Implement profit targets (30-100%+) AND stop losses (5-10%)
+⚡ TIME LIMITS: Add max hold time (use candle counting)
+⚡ AGGRESSIVE SIZING: size=1.0 (all-in) is OK for memecoins
+⚡ NO LONG HOLDS: Exit within minutes/hours, not days
 
 Generate a complete, executable backtesting strategy using:
 - backtesting.py library (from backtesting import Backtest, Strategy)
@@ -153,6 +183,7 @@ CRITICAL REQUIREMENTS:
 5. Use self.buy() and self.position.close() for trades
 6. Data must have columns: datetime, open, high, low, close, volume (lowercase)
 7. After loading, capitalize columns and set datetime as index
+8. MEMECOIN: Use cash=1000, commission=0.005 (0.5%)
 
 Example structure:
 ```python
