@@ -73,10 +73,15 @@ MIN_TRADE_SIZE_USD = 50      # Minimum $50 per trade
 # ============================================================================
 
 # Which AI model to use for strategy generation
-# Options: 'anthropic', 'openai', 'deepseek'
-STRATEGY_AI_MODEL = 'anthropic'
+# Options: 'anthropic', 'openai', 'deepseek', 'ollama', 'groq', 'gemini', 'xai', 'openrouter'
+STRATEGY_AI_MODEL = 'anthropic'  # Default: Claude (best for code generation)
 
-# Model-specific settings
+# Global AI settings (used by all models)
+AI_TEMPERATURE = 0.7      # Creativity (0.0 = deterministic, 1.0 = creative)
+AI_MAX_TOKENS = 4000      # Maximum response length
+
+# Model-specific settings (DEPRECATED - now using ModelFactory)
+# Keep for backwards compatibility with old code
 AI_MODELS = {
     'anthropic': {
         'model': 'claude-3-5-sonnet-20241022',
@@ -92,8 +97,30 @@ AI_MODELS = {
         'model': 'deepseek-reasoner',
         'max_tokens': 8000,
         'temperature': 0.7
+    },
+    'ollama': {
+        'model': 'llama3.2',  # or 'deepseek-r1', 'gemma:2b'
+        'max_tokens': 4000,
+        'temperature': 0.7
+    },
+    'groq': {
+        'model': 'mixtral-8x7b-32768',
+        'max_tokens': 4000,
+        'temperature': 0.7
     }
 }
+
+# Ollama-specific settings (for local LLMs)
+OLLAMA_ENABLED = True              # Enable Ollama support for swarm
+OLLAMA_DEFAULT_MODEL = 'llama3.2'  # Default: llama3.2 (balanced)
+# Alternative models:
+# - 'deepseek-r1' - Better reasoning (7B, shows thinking)
+# - 'gemma:2b' - Faster, lighter (2B)
+# - 'llama3.2' - Balanced performance (3B)
+
+# Before using Ollama, run:
+#   ollama serve
+#   ollama pull llama3.2       # or deepseek-r1, gemma:2b
 
 # ============================================================================
 # BACKTEST FILTERING & SAVING (MEMECOIN ADJUSTED)
@@ -173,8 +200,25 @@ SWARM_TEST_TOKENS = [
     # Better to test on same token across time
 ]
 
-# Cost optimization
-SWARM_COST_OPTIMIZED = True  # Use cheaper AI models (DeepSeek) for initial passes
+# Cost optimization modes
+SWARM_COST_OPTIMIZED = True  # Use cheaper AI models for initial passes
+SWARM_USE_OLLAMA = False     # Use local Ollama (FREE, but slower) instead of cloud APIs
+
+# Model selection for different swarm phases
+# If SWARM_USE_OLLAMA=True, all phases use Ollama (requires: ollama serve)
+# If SWARM_COST_OPTIMIZED=True and OLLAMA=False, uses mix below:
+SWARM_MODELS = {
+    'research': 'deepseek',      # Research phase (cheap, fast reasoning)
+    'backtest': 'anthropic',     # Code generation (need quality)
+    'debug': 'deepseek'          # Debugging (cheap is OK)
+}
+
+# Ollama model for swarm (if SWARM_USE_OLLAMA=True)
+SWARM_OLLAMA_MODEL = 'llama3.2'  # Options: 'llama3.2', 'deepseek-r1', 'gemma:2b'
+# Cost comparison:
+#   Ollama:   $0.00 (FREE - runs locally)
+#   DeepSeek: ~$0.002 per strategy
+#   Claude:   ~$0.048 per strategy
 
 # Swarm result filtering (MEMECOIN ADJUSTED)
 SWARM_MIN_RETURN_PCT = 30.0          # Higher bar for memecoins (30%+ expected)

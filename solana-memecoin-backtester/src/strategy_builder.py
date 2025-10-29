@@ -2,6 +2,7 @@
 AI-Powered Strategy Builder
 Generates backtesting strategies from text descriptions using LLM
 Based on RBI (Research-Based Inference) agent pattern
+Now supports ALL models via ModelFactory including Ollama (local, free LLMs)
 """
 
 import os
@@ -11,52 +12,39 @@ from typing import Dict, Optional
 
 try:
     from . import config
+    from .models.model_factory import ModelFactory
 except ImportError:
     import config
+    from models.model_factory import ModelFactory
 
 
 class AIStrategyBuilder:
     """Build trading strategies using AI from text descriptions"""
 
-    def __init__(self, model_type: Optional[str] = None):
+    def __init__(self, model_type: Optional[str] = None, model_name: Optional[str] = None):
         """
         Initialize AI strategy builder
 
         Args:
-            model_type: 'anthropic', 'openai', or 'deepseek' (default from config)
+            model_type: Model provider: 'anthropic', 'openai', 'deepseek', 'ollama', 'groq', etc.
+            model_name: Specific model name (optional, uses defaults if None)
         """
         self.model_type = model_type or config.STRATEGY_AI_MODEL
-        self.model_config = config.AI_MODELS.get(self.model_type)
+        self.model_name = model_name
 
-        if not self.model_config:
-            raise ValueError(f"Invalid model type: {self.model_type}")
+        # Initialize ModelFactory
+        self.factory = ModelFactory()
 
-        # Import the appropriate model client
-        self.client = self._init_model()
+        # Get model from factory
+        self.model = self.factory.get_model(self.model_type, self.model_name)
+
+        if not self.model:
+            raise ValueError(f"Could not initialize model type: {self.model_type}")
+
+        print(f"✓ Initialized {self.model_type} model: {self.model.model_name}")
 
         # Create strategies directory
         os.makedirs(config.STRATEGIES_DIR, exist_ok=True)
-
-    def _init_model(self):
-        """Initialize the AI model client"""
-        if self.model_type == 'anthropic':
-            import anthropic
-            return anthropic.Anthropic(api_key=config.ANTHROPIC_KEY)
-
-        elif self.model_type == 'openai':
-            import openai
-            return openai.OpenAI(api_key=config.OPENAI_KEY)
-
-        elif self.model_type == 'deepseek':
-            import openai
-            client = openai.OpenAI(
-                api_key=config.DEEPSEEK_KEY,
-                base_url="https://api.deepseek.com"
-            )
-            return client
-
-        else:
-            raise ValueError(f"Unsupported model type: {self.model_type}")
 
     def generate_strategy(self, idea_text: str, strategy_name: Optional[str] = None) -> Dict[str, str]:
         """
@@ -268,34 +256,26 @@ Requirements:
         return f"Strategy_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
     def _call_llm(self, system_prompt: str, user_prompt: str) -> str:
-        """Call the configured LLM and return response"""
+        """Call the configured LLM via ModelFactory unified interface"""
 
-        if self.model_type == 'anthropic':
-            response = self.client.messages.create(
-                model=self.model_config['model'],
-                max_tokens=self.model_config['max_tokens'],
-                temperature=self.model_config['temperature'],
-                system=system_prompt,
-                messages=[
-                    {"role": "user", "content": user_prompt}
-                ]
-            )
-            return response.content[0].text
+        # Use ModelFactory's unified generate_response method
+        response = self.model.generate_response(
+            system_prompt=system_prompt,
+            user_content=user_prompt,
+            temperature=config.AI_TEMPERATURE,
+            max_tokens=config.AI_MAX_TOKENS
+        )
 
-        elif self.model_type in ['openai', 'deepseek']:
-            response = self.client.chat.completions.create(
-                model=self.model_config['model'],
-                max_tokens=self.model_config['max_tokens'],
-                temperature=self.model_config['temperature'],
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ]
-            )
-            return response.choices[0].message.content
-
+        # Extract text content from response (handles all model types)
+        if hasattr(response, 'content'):
+            # Anthropic format
+            if isinstance(response.content, list):
+                return response.content[0].text
+            else:
+                return response.content
         else:
-            raise ValueError(f"Unsupported model type: {self.model_type}")
+            # OpenAI/DeepSeek/Ollama format
+            return response
 
     def _save_research(self, strategy_name: str, research: str) -> str:
         """Save research text to file"""
@@ -361,7 +341,7 @@ def test_builder():
 
     try:
         builder = AIStrategyBuilder()
-        print(f"\n✓ Using AI model: {builder.model_type} ({builder.model_config['model']})")
+        print(f"\n✓ Using AI model: {builder.model_type} ({builder.model.model_name})")
 
         result = builder.generate_strategy(sample_idea)
 

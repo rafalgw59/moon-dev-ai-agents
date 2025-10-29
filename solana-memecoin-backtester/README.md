@@ -5,11 +5,14 @@ An AI-powered backtesting tool for researching, building, and testing trading st
 ## ✨ Features
 
 - 📊 **Moralis API Integration** - Fetch real-time and historical OHLCV data for any Solana token
-- 🤖 **AI Strategy Builder** - Generate trading strategies from text descriptions using Claude, GPT-4, or DeepSeek
+- 🤖 **AI Strategy Builder** - Generate trading strategies from text descriptions using Claude, GPT-4, DeepSeek, **or Ollama (FREE local LLMs)**
+- 🚀 **AI Swarm** - Parallel agent system for strategy discovery with anti-overfitting measures
+- 🆓 **Ollama Support** - Run unlimited strategies for FREE using local LLMs (no API keys needed)
 - 🔬 **Professional Backtesting** - Powered by `backtesting.py` with TA-Lib indicators
 - 📈 **Web Dashboard** - Beautiful FastAPI dashboard to view and analyze backtest results
 - ⚙️ **Easy Configuration** - Simple config file for all parameters (dates, timeframes, tokens)
 - 💾 **Results Tracking** - Automatic CSV storage of profitable backtests
+- ⚡ **Memecoin Optimized** - 1min timeframe, short holding periods, high volatility parameters
 
 ## 📋 Table of Contents
 
@@ -435,6 +438,29 @@ OPENAI_KEY=your_key_here
 ```env
 DEEPSEEK_KEY=your_key_here
 ```
+
+### Ollama (FREE - Local LLMs) 🆓
+
+**No API keys needed!** Run strategies for FREE using local models.
+
+1. Install Ollama:
+```bash
+curl https://ollama.ai/install.sh | sh
+```
+
+2. Start server and pull a model:
+```bash
+ollama serve
+ollama pull llama3.2  # or deepseek-r1, gemma:2b
+```
+
+3. Enable in `src/config.py`:
+```python
+SWARM_USE_OLLAMA = True
+SWARM_OLLAMA_MODEL = 'llama3.2'
+```
+
+**See [OLLAMA_SETUP.md](OLLAMA_SETUP.md) for complete guide.**
 
 ## 💡 Examples
 

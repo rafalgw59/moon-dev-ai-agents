@@ -132,17 +132,17 @@ class SwarmRunner:
         Returns:
             Model type string
         """
+        # Mode 1: Use Ollama (FREE - local LLMs)
+        if config.SWARM_USE_OLLAMA:
+            return 'ollama'
+
+        # Mode 2: No optimization - use default model
         if not self.cost_optimized:
             return config.STRATEGY_AI_MODEL
 
-        # Cost optimization: use cheaper models for initial passes
-        cheap_models = {
-            'research': 'deepseek',      # Cheap and fast
-            'backtest': 'anthropic',      # Need quality code
-            'debug': 'deepseek'           # Can use cheaper for debugging
-        }
-
-        return cheap_models.get(phase, config.STRATEGY_AI_MODEL)
+        # Mode 3: Cost optimization - use cheap cloud APIs
+        # Uses config.SWARM_MODELS mapping
+        return config.SWARM_MODELS.get(phase, config.STRATEGY_AI_MODEL)
 
     def split_data_for_walkforward(self, df: pd.DataFrame, train_pct: float = 0.7) -> tuple:
         """
@@ -366,7 +366,16 @@ class SwarmRunner:
 
             # Use cost-optimized model
             model_type = self.get_ai_model_config('research')
-            builder = AIStrategyBuilder(model_type=model_type)
+
+            # If using Ollama, pass the specific model name
+            if model_type == 'ollama':
+                builder = AIStrategyBuilder(
+                    model_type=model_type,
+                    model_name=config.SWARM_OLLAMA_MODEL
+                )
+                self.thread_print(f"Using Ollama model: {config.SWARM_OLLAMA_MODEL}", thread_id, "cyan")
+            else:
+                builder = AIStrategyBuilder(model_type=model_type)
 
             strategy_result = builder.generate_strategy(idea)
             strategy_name = strategy_result['name']
@@ -582,7 +591,22 @@ class SwarmRunner:
         print("=" * 70)
         print(f"Ideas to process: {len(ideas)}")
         print(f"Max parallel threads: {self.max_threads}")
-        print(f"Cost optimized: {self.cost_optimized}")
+
+        # Show AI mode
+        if config.SWARM_USE_OLLAMA:
+            print(f"AI Mode: OLLAMA (FREE - Local) - Model: {config.SWARM_OLLAMA_MODEL}")
+            print(f"  ⚡ Cost: $0.00 per strategy")
+            print(f"  ℹ️  Requires: ollama serve running")
+        elif self.cost_optimized:
+            print(f"AI Mode: COST OPTIMIZED (Cloud APIs)")
+            print(f"  Research: {config.SWARM_MODELS['research']}")
+            print(f"  Backtest: {config.SWARM_MODELS['backtest']}")
+            print(f"  Debug: {config.SWARM_MODELS['debug']}")
+            print(f"  ⚡ Cost: ~$0.054 per strategy")
+        else:
+            print(f"AI Mode: DEFAULT - {config.STRATEGY_AI_MODEL}")
+            print(f"  ⚡ Cost: Depends on model")
+
         print(f"Walk-forward analysis: ENABLED")
         print(f"Multi-token testing: {'ENABLED' if config.SWARM_MULTI_TOKEN_TEST else 'DISABLED'}")
         print("=" * 70)

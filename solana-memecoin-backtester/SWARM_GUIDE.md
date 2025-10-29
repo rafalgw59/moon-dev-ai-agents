@@ -32,11 +32,73 @@ The **AI Swarm** is a parallel agent system that automatically discovers, tests,
 - Identifies strategies that work on specific assets vs. general patterns
 
 ### 3. 💰 **Cost Optimization**
-- **Research Phase**: Uses DeepSeek (cheap, fast)
-- **Code Generation**: Uses Claude (quality code generation)
-- **Debugging**: Uses DeepSeek (cost-effective iterations)
-- Estimated cost: ~$0.05-0.15 per strategy
-- 10-20x cheaper than using GPT-4 for everything
+
+The swarm supports **three modes** for AI model usage:
+
+#### Mode 1: Ollama (FREE - Local LLMs) 🆓
+- **Cost**: $0.00 per strategy (runs 100% locally)
+- **Models**: llama3.2, deepseek-r1, gemma:2b
+- **Pros**: Free, private, no API keys needed
+- **Cons**: Slower than cloud APIs, requires local setup
+- **Best for**: Learning, unlimited experimentation, privacy
+
+**Setup:**
+```bash
+# Install Ollama
+curl https://ollama.ai/install.sh | sh
+
+# Start Ollama server
+ollama serve
+
+# Pull models (choose one or all)
+ollama pull llama3.2      # Balanced (3B) - Recommended
+ollama pull deepseek-r1   # Better reasoning (7B)
+ollama pull gemma:2b      # Faster (2B)
+
+# Verify
+ollama list
+```
+
+**Enable in config.py:**
+```python
+SWARM_USE_OLLAMA = True
+SWARM_OLLAMA_MODEL = 'llama3.2'  # or 'deepseek-r1', 'gemma:2b'
+```
+
+#### Mode 2: Cost Optimized (Cloud APIs) 💵
+- **Research Phase**: Uses DeepSeek (~$0.002 per strategy)
+- **Code Generation**: Uses Claude (~$0.048 per strategy)
+- **Debugging**: Uses DeepSeek (~$0.004 per strategy)
+- **Total**: ~$0.054 per strategy
+- **Best for**: Production use, better quality, faster results
+
+**Enable in config.py:**
+```python
+SWARM_USE_OLLAMA = False
+SWARM_COST_OPTIMIZED = True
+SWARM_MODELS = {
+    'research': 'deepseek',
+    'backtest': 'anthropic',
+    'debug': 'deepseek'
+}
+```
+
+#### Mode 3: Default (Single Model) 🎯
+- Uses single model for all phases: `STRATEGY_AI_MODEL`
+- Cost depends on model (e.g., GPT-4: ~$0.50 per strategy)
+- **Best for**: Consistency, using specific model
+
+**Enable in config.py:**
+```python
+SWARM_USE_OLLAMA = False
+SWARM_COST_OPTIMIZED = False
+STRATEGY_AI_MODEL = 'anthropic'  # or 'openai', 'groq', etc.
+```
+
+**Cost Comparison (100 strategies):**
+- **Ollama**: $0.00 (FREE)
+- **Cost Optimized**: ~$5.40
+- **GPT-4 Only**: ~$50.00
 
 ### 4. 📊 **Comprehensive Results Tracking**
 All results saved to CSV with:
