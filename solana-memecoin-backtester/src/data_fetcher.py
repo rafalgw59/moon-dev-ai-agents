@@ -85,27 +85,50 @@ class MoralisDataFetcher:
     def get_ohlcv_data(
         self,
         token_address: str,
-        date_start: str,
-        date_end: str,
-        timeframe: str = '15min',
+        date_start: str = None,
+        date_end: str = None,
+        timeframe: str = None,
         save_to_csv: bool = True
     ) -> pd.DataFrame:
         """
-        Fetch OHLCV (candlestick) data for a token
+        Fetch OHLCV (candlestick) data for a token (memecoin optimized)
 
         Args:
             token_address: Solana token address
-            date_start: Start date (YYYY-MM-DD)
-            date_end: End date (YYYY-MM-DD)
-            timeframe: Candle timeframe (1min, 5min, 15min, 30min, 1hour, 4hour, 1day)
+            date_start: Start date (YYYY-MM-DD or 'auto' for config default)
+            date_end: End date (YYYY-MM-DD or 'today')
+            timeframe: Candle timeframe (1min, 5min, 15min, etc.) or None for config default
             save_to_csv: Save data to CSV file
 
         Returns:
             DataFrame with columns: datetime, open, high, low, close, volume
         """
-        # Convert dates to timestamps
-        start_dt = datetime.strptime(date_start, '%Y-%m-%d')
-        end_dt = datetime.strptime(date_end, '%Y-%m-%d')
+        # Use config defaults if not specified (memecoin defaults)
+        if date_start is None or date_start.lower() == 'auto':
+            start, end = config.get_date_range()
+            start_dt = start
+            end_dt = end
+            date_start_str = start.strftime('%Y-%m-%d')
+            date_end_str = end.strftime('%Y-%m-%d')
+        else:
+            start_dt = datetime.strptime(date_start, '%Y-%m-%d')
+            date_end_str = date_end or 'today'
+            if date_end_str.lower() == 'today':
+                end_dt = datetime.now()
+                date_end_str = end_dt.strftime('%Y-%m-%d')
+            else:
+                end_dt = datetime.strptime(date_end_str, '%Y-%m-%d')
+            date_start_str = date_start
+
+        # Use config timeframe if not specified
+        if timeframe is None:
+            timeframe = config.TIMEFRAME
+
+        # Warn if requesting more than 30 days for memecoins
+        days_diff = (end_dt - start_dt).days
+        if days_diff > config.MAX_DAYS_FOR_MEMECOIN:
+            print(f"⚠ Warning: Fetching {days_diff} days for memecoin (recommended max: {config.MAX_DAYS_FOR_MEMECOIN})")
+            print(f"  Most memecoins don't have data beyond {config.MAX_DAYS_FOR_MEMECOIN} days")
 
         # Moralis API endpoint
         url = f'{self.base_url}/token/mainnet/{token_address}/ohlcv'
@@ -113,9 +136,12 @@ class MoralisDataFetcher:
         all_candles = []
         current_start = start_dt
 
-        print(f"Fetching OHLCV data for {token_address[:8]}...")
-        print(f"  Date range: {date_start} to {date_end}")
-        print(f"  Timeframe: {timeframe}")
+        print(f"💰 Fetching MEMECOIN data for {token_address[:8]}...")
+        print(f"  📅 Date range: {date_start_str} to {date_end_str} ({days_diff} days)")
+        print(f"  ⏱  Timeframe: {timeframe}")
+        if timeframe == '1min':
+            expected_candles = days_diff * 24 * 60
+            print(f"  📊 Expected ~{expected_candles:,} candles (if 24/7 trading)")
 
         while current_start < end_dt:
             # Calculate end time for this batch (Moralis limits response size)
@@ -159,12 +185,17 @@ class MoralisDataFetcher:
 
         print(f"✓ Total candles fetched: {len(df)}")
 
+        # Validate minimum candles for memecoins
+        if len(df) < config.MIN_CANDLES_REQUIRED:
+            print(f"⚠ Warning: Only {len(df)} candles (minimum {config.MIN_CANDLES_REQUIRED} recommended)")
+            print(f"  Token may be too new or have insufficient trading history")
+
         # Save to CSV
         if save_to_csv and not df.empty:
-            filename = self._generate_filename(token_address, date_start, date_end, timeframe)
+            filename = self._generate_filename(token_address, date_start_str, date_end_str, timeframe)
             filepath = os.path.join(config.DOWNLOADED_DATA_DIR, filename)
             df.to_csv(filepath, index=False)
-            print(f"✓ Saved to: {filepath}")
+            print(f"💾 Saved to: {filepath}")
 
         return df
 

@@ -15,37 +15,58 @@ OPENAI_KEY = os.getenv('OPENAI_KEY', '')
 DEEPSEEK_KEY = os.getenv('DEEPSEEK_KEY', '')
 
 # ============================================================================
-# DATA FETCHING PARAMETERS (EASY TO CHANGE)
+# DATA FETCHING PARAMETERS (MEMECOIN OPTIMIZED)
 # ============================================================================
 
-# Date range for backtesting
-DATE_START = '2024-01-01'  # Format: YYYY-MM-DD
-DATE_END = '2024-12-31'    # Format: YYYY-MM-DD or 'today' for current date
+# Date range for backtesting - MEMECOIN DEFAULT: SHORT PERIODS
+# Most memecoins are short-lived (days to weeks), so we use recent data
+DATE_START = 'auto'  # 'auto' = last 7 days, or specify 'YYYY-MM-DD'
+DATE_END = 'today'   # 'today' for current date
+
+# AUTO DATE CALCULATION FOR MEMECOINS
+AUTO_DAYS_BACK = 7  # For memecoins: 7 days is typical lifespan (10k-100k MC)
 
 # Timeframe options: '1min', '5min', '15min', '30min', '1hour', '4hour', '1day'
-TIMEFRAME = '15min'
+# MEMECOIN DEFAULT: 1min for quick moves and pumps
+TIMEFRAME = '1min'
+
+# Memecoin-specific timeframes for different strategies
+TIMEFRAME_SCALP = '1min'   # For catching quick pumps (minutes)
+TIMEFRAME_MOMENTUM = '5min'    # For momentum trades (hours)
+TIMEFRAME_SWING = '15min'      # For longer holds (days - rare for memecoins)
 
 # Default token addresses to backtest (Solana memecoin addresses)
+# Focus on: 10k-100k MC, recent launches, high volume
 DEFAULT_TOKENS = [
-    # Add your token addresses here
+    # Add your memecoin addresses here
     # Example: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'
 ]
 
 # Maximum number of candles to fetch per request (Moralis limit)
 MAX_CANDLES_PER_REQUEST = 1000
 
+# Memecoin data validation
+MIN_CANDLES_REQUIRED = 100  # Need at least 100 candles (1.7 hours at 1min)
+MAX_DAYS_FOR_MEMECOIN = 30  # Don't fetch more than 30 days for memecoins
+
 # ============================================================================
-# BACKTESTING PARAMETERS
+# BACKTESTING PARAMETERS (MEMECOIN OPTIMIZED)
 # ============================================================================
 
 # Initial capital for backtests
-INITIAL_CAPITAL = 10000  # USD
+INITIAL_CAPITAL = 1000  # USD - smaller size for memecoins (high risk)
 
 # Commission/fees per trade (as decimal, e.g., 0.001 = 0.1%)
-COMMISSION = 0.003  # 0.3% (typical for DEX)
+# MEMECOIN: Higher fees due to DEX + volatility
+COMMISSION = 0.005  # 0.5% (Raydium/Jupiter typical with slippage)
 
 # Slippage simulation (as decimal)
-SLIPPAGE = 0.001  # 0.1%
+# MEMECOIN: Much higher slippage due to low liquidity
+SLIPPAGE = 0.02  # 2% (can be 5-10% during pumps!)
+
+# Memecoin-specific risk parameters
+MAX_POSITION_SIZE_PCT = 100  # Can go all-in on memecoins (high risk/reward)
+MIN_TRADE_SIZE_USD = 50      # Minimum $50 per trade
 
 # ============================================================================
 # AI STRATEGY BUILDER SETTINGS
@@ -75,14 +96,15 @@ AI_MODELS = {
 }
 
 # ============================================================================
-# BACKTEST FILTERING & SAVING
+# BACKTEST FILTERING & SAVING (MEMECOIN ADJUSTED)
 # ============================================================================
 
 # Minimum metrics to save a backtest result
-MIN_RETURN_PCT = 10.0          # Minimum return % to save
-MIN_SHARPE_RATIO = 0.5         # Minimum Sharpe ratio
-MIN_WIN_RATE = 45.0            # Minimum win rate %
-MAX_DRAWDOWN_PCT = 30.0        # Maximum acceptable drawdown %
+# MEMECOIN: Higher returns expected due to volatility
+MIN_RETURN_PCT = 20.0          # Minimum 20% return (memecoins are high risk/reward)
+MIN_SHARPE_RATIO = 0.3         # Lower Sharpe OK (memecoins are volatile)
+MIN_WIN_RATE = 40.0            # Lower win rate OK (big wins, many small losses)
+MAX_DRAWDOWN_PCT = 50.0        # Higher drawdown acceptable (volatile assets)
 
 # Auto-save all backtests regardless of performance?
 SAVE_ALL_BACKTESTS = False
@@ -133,45 +155,55 @@ LOG_TO_FILE = True
 LOG_FILE = 'backtester.log'
 
 # ============================================================================
-# SWARM SETTINGS (AI Agent Swarm for Strategy Discovery)
+# SWARM SETTINGS (MEMECOIN OPTIMIZED - AI Agent Swarm for Strategy Discovery)
 # ============================================================================
 
 # Maximum parallel threads for swarm
 SWARM_MAX_THREADS = 5  # Adjust based on your API rate limits
 
 # Walk-forward analysis settings (anti-overfitting)
-SWARM_WALKFORWARD_TRAIN_PCT = 0.7  # 70% training, 30% testing
+# MEMECOIN: More aggressive split since data is limited
+SWARM_WALKFORWARD_TRAIN_PCT = 0.80  # 80% training, 20% testing (less data available)
 
-# Multi-token testing (test strategies on multiple tokens)
-SWARM_MULTI_TOKEN_TEST = True
+# Multi-token testing (test strategies on multiple memecoins)
+SWARM_MULTI_TOKEN_TEST = False  # Disable for memecoins (each is unique)
 SWARM_TEST_TOKENS = [
-    'So11111111111111111111111111111111111111112',  # Wrapped SOL
-    # Add more token addresses to test strategies across multiple assets
+    # Memecoins are too unique to cross-validate
+    # Each has different community, holders, patterns
+    # Better to test on same token across time
 ]
 
 # Cost optimization
 SWARM_COST_OPTIMIZED = True  # Use cheaper AI models (DeepSeek) for initial passes
 
-# Swarm result filtering (stricter than regular backtests)
-SWARM_MIN_RETURN_PCT = 15.0          # Higher bar for swarm results
-SWARM_MIN_WALKFORWARD_RATIO = 0.8    # Minimum 0.8 to avoid overfitting
-SWARM_MIN_SHARPE_RATIO = 1.0         # Higher quality strategies
+# Swarm result filtering (MEMECOIN ADJUSTED)
+SWARM_MIN_RETURN_PCT = 30.0          # Higher bar for memecoins (30%+ expected)
+SWARM_MIN_WALKFORWARD_RATIO = 0.7    # Lower ratio OK (memecoins are unpredictable)
+SWARM_MIN_SHARPE_RATIO = 0.5         # Lower Sharpe acceptable (high volatility)
+SWARM_MIN_NUM_TRADES = 5             # At least 5 trades to validate strategy
 
 # Rate limiting for swarm
-SWARM_RATE_LIMIT_DELAY = 1.0  # Seconds between API calls per thread
+SWARM_RATE_LIMIT_DELAY = 0.5  # Faster for memecoins (time-sensitive)
 
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
 
 def get_date_range():
-    """Get start and end dates as datetime objects"""
-    start = datetime.strptime(DATE_START, '%Y-%m-%d')
+    """Get start and end dates as datetime objects (memecoin optimized)"""
 
+    # Handle end date
     if DATE_END.lower() == 'today':
         end = datetime.now()
     else:
         end = datetime.strptime(DATE_END, '%Y-%m-%d')
+
+    # Handle start date (with 'auto' for memecoins)
+    if DATE_START.lower() == 'auto':
+        # Auto-calculate based on AUTO_DAYS_BACK
+        start = end - timedelta(days=AUTO_DAYS_BACK)
+    else:
+        start = datetime.strptime(DATE_START, '%Y-%m-%d')
 
     return start, end
 
