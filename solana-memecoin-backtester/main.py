@@ -375,23 +375,219 @@ def view_top_strategies():
         print(f"\n❌ Error: {e}")
 
 
+def select_swarm_model():
+    """Interactive model selection for swarm"""
+    print("\n" + "=" * 70)
+    print("🤖 SELECT AI MODEL FOR SWARM")
+    print("=" * 70)
+
+    print("\nChoose which AI model to use for strategy generation:\n")
+
+    print("1. 🆓 OLLAMA (Local - FREE)")
+    print("   • Cost: $0.00 per strategy")
+    print("   • Speed: Slower (local processing)")
+    print("   • Quality: Good")
+    print("   • Requires: ollama serve running")
+    print("   • Best for: Unlimited experimentation, privacy")
+    print()
+
+    print("2. 💵 COST OPTIMIZED (Cloud APIs)")
+    print("   • Cost: ~$0.054 per strategy")
+    print("   • Speed: Fast (cloud processing)")
+    print("   • Quality: Better")
+    print("   • Models: DeepSeek (research) + Claude (code)")
+    print("   • Best for: Production use, better results")
+    print()
+
+    print("3. 🎯 CLAUDE (Anthropic)")
+    print("   • Cost: ~$0.15 per strategy")
+    print("   • Speed: Fast")
+    print("   • Quality: Excellent")
+    print("   • Best for: Highest quality strategies")
+    print()
+
+    print("4. 🧠 DEEPSEEK (Reasoning)")
+    print("   • Cost: ~$0.01 per strategy")
+    print("   • Speed: Fast")
+    print("   • Quality: Good for reasoning")
+    print("   • Best for: Complex logic, cheap")
+    print()
+
+    print("5. ⚡ GROQ (Fast Inference)")
+    print("   • Cost: ~$0.02 per strategy")
+    print("   • Speed: Very fast")
+    print("   • Quality: Good")
+    print("   • Best for: Quick iterations")
+    print()
+
+    print("6. 🌐 OPENAI (GPT-4)")
+    print("   • Cost: ~$0.50 per strategy")
+    print("   • Speed: Fast")
+    print("   • Quality: Excellent")
+    print("   • Best for: Maximum quality (expensive)")
+    print()
+
+    print("7. ⚙️  CUSTOM (Use config.py settings)")
+    print("   • Uses current config.py settings")
+    print()
+
+    choice = input("Enter choice (1-7): ").strip()
+
+    if choice == '1':
+        # Ollama
+        print("\n🆓 Selected: OLLAMA (Local - FREE)")
+
+        # Check if Ollama is available
+        try:
+            from src.models.model_factory import ModelFactory
+            factory = ModelFactory()
+            if not factory.is_model_available('ollama'):
+                print("\n⚠️  WARNING: Ollama not detected!")
+                print("   Make sure you have:")
+                print("   1. Installed Ollama: curl https://ollama.ai/install.sh | sh")
+                print("   2. Started server: ollama serve")
+                print("   3. Pulled a model: ollama pull llama3.2")
+                print("\n   See OLLAMA_SETUP.md for full instructions")
+
+                cont = input("\n   Continue anyway? (y/n): ").strip().lower()
+                if cont != 'y':
+                    return None
+        except:
+            pass
+
+        # Ask which Ollama model
+        print("\n   Available Ollama models:")
+        print("   1. llama3.2 (Recommended - balanced)")
+        print("   2. deepseek-r1 (Better reasoning)")
+        print("   3. gemma:2b (Faster)")
+        print("   4. Custom model name")
+
+        model_choice = input("   Select model (1-4): ").strip()
+
+        if model_choice == '1':
+            ollama_model = 'llama3.2'
+        elif model_choice == '2':
+            ollama_model = 'deepseek-r1'
+        elif model_choice == '3':
+            ollama_model = 'gemma:2b'
+        elif model_choice == '4':
+            ollama_model = input("   Enter model name: ").strip()
+        else:
+            ollama_model = 'llama3.2'  # default
+
+        return {
+            'mode': 'ollama',
+            'use_ollama': True,
+            'ollama_model': ollama_model,
+            'cost_optimized': False
+        }
+
+    elif choice == '2':
+        # Cost Optimized
+        print("\n💵 Selected: COST OPTIMIZED")
+        print("   Research: DeepSeek (~$0.002)")
+        print("   Code Gen: Claude (~$0.048)")
+        print("   Debug: DeepSeek (~$0.004)")
+        return {
+            'mode': 'cost_optimized',
+            'use_ollama': False,
+            'cost_optimized': True,
+            'models': {
+                'research': 'deepseek',
+                'backtest': 'anthropic',
+                'debug': 'deepseek'
+            }
+        }
+
+    elif choice == '3':
+        # Claude
+        print("\n🎯 Selected: CLAUDE (Anthropic)")
+        print("   Using Claude for all phases")
+        return {
+            'mode': 'single',
+            'use_ollama': False,
+            'cost_optimized': False,
+            'model_type': 'anthropic'
+        }
+
+    elif choice == '4':
+        # DeepSeek
+        print("\n🧠 Selected: DEEPSEEK")
+        print("   Using DeepSeek for all phases")
+        return {
+            'mode': 'single',
+            'use_ollama': False,
+            'cost_optimized': False,
+            'model_type': 'deepseek'
+        }
+
+    elif choice == '5':
+        # Groq
+        print("\n⚡ Selected: GROQ")
+        print("   Using Groq for all phases")
+        return {
+            'mode': 'single',
+            'use_ollama': False,
+            'cost_optimized': False,
+            'model_type': 'groq'
+        }
+
+    elif choice == '6':
+        # OpenAI
+        print("\n🌐 Selected: OPENAI (GPT-4)")
+        print("   Using GPT-4 for all phases")
+        return {
+            'mode': 'single',
+            'use_ollama': False,
+            'cost_optimized': False,
+            'model_type': 'openai'
+        }
+
+    elif choice == '7':
+        # Custom
+        print("\n⚙️  Selected: CUSTOM (config.py)")
+        print(f"   Using config settings:")
+        print(f"   SWARM_USE_OLLAMA: {config.SWARM_USE_OLLAMA}")
+        print(f"   SWARM_COST_OPTIMIZED: {config.SWARM_COST_OPTIMIZED}")
+        if config.SWARM_USE_OLLAMA:
+            print(f"   SWARM_OLLAMA_MODEL: {config.SWARM_OLLAMA_MODEL}")
+        return None  # Use config defaults
+
+    else:
+        print("\n❌ Invalid choice. Using config defaults.")
+        return None
+
+
 def run_swarm_menu():
     """Run AI swarm for parallel strategy discovery"""
     print("\n" + "=" * 70)
     print("🚀 AI SWARM - PARALLEL STRATEGY DISCOVERY")
     print("=" * 70)
 
-    print(f"\nSwarm Configuration:")
+    # Model selection
+    model_config = select_swarm_model()
+
+    if model_config is None:
+        # Use config defaults
+        use_ollama = config.SWARM_USE_OLLAMA
+        cost_optimized = config.SWARM_COST_OPTIMIZED
+        model_override = None
+    else:
+        # Override config with user selection
+        use_ollama = model_config['use_ollama']
+        cost_optimized = model_config.get('cost_optimized', False)
+        model_override = model_config
+
+    print(f"\n📋 Swarm Configuration:")
     print(f"  Max Threads: {config.SWARM_MAX_THREADS}")
     print(f"  Walk-Forward Analysis: {config.SWARM_WALKFORWARD_TRAIN_PCT*100:.0f}% train / {(1-config.SWARM_WALKFORWARD_TRAIN_PCT)*100:.0f}% test")
     print(f"  Multi-Token Testing: {'ENABLED' if config.SWARM_MULTI_TOKEN_TEST else 'DISABLED'}")
-    print(f"  Cost Optimized: {config.SWARM_COST_OPTIMIZED}")
 
     print("\n⚠️  ANTI-OVERFITTING MEASURES:")
     print("  ✓ Walk-forward analysis (train/test split)")
     print("  ✓ Out-of-sample validation")
     print("  ✓ Multi-token testing (if enabled)")
-    print("  ✓ Minimum walkforward ratio: 0.8")
+    print("  ✓ Minimum walkforward ratio: 0.7")
 
     print("\n" + "-" * 70)
 
@@ -434,9 +630,11 @@ def run_swarm_menu():
     try:
         from src.swarm_runner import SwarmRunner
 
+        # Create swarm with config overrides if provided
         swarm = SwarmRunner(
             max_threads=config.SWARM_MAX_THREADS,
-            cost_optimized=config.SWARM_COST_OPTIMIZED
+            cost_optimized=cost_optimized,
+            model_override=model_override
         )
 
         swarm.run_swarm(ideas)

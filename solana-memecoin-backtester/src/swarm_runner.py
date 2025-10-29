@@ -39,16 +39,26 @@ class SwarmRunner:
     - Thread-safe operations
     """
 
-    def __init__(self, max_threads: int = None, cost_optimized: bool = True):
+    def __init__(self, max_threads: int = None, cost_optimized: bool = True, model_override: Dict = None):
         """
         Initialize swarm runner
 
         Args:
             max_threads: Maximum parallel threads (default from config)
             cost_optimized: Use cheaper AI models to save costs
+            model_override: Override model config from interactive menu
+                {
+                    'mode': 'ollama'|'cost_optimized'|'single',
+                    'use_ollama': bool,
+                    'cost_optimized': bool,
+                    'ollama_model': str (if mode='ollama'),
+                    'model_type': str (if mode='single'),
+                    'models': dict (if mode='cost_optimized')
+                }
         """
         self.max_threads = max_threads or config.SWARM_MAX_THREADS
         self.cost_optimized = cost_optimized
+        self.model_override = model_override
 
         # Thread safety
         self.console_lock = Lock()
@@ -132,17 +142,36 @@ class SwarmRunner:
         Returns:
             Model type string
         """
-        # Mode 1: Use Ollama (FREE - local LLMs)
+        # Priority 1: Check for interactive model override
+        if self.model_override:
+            mode = self.model_override.get('mode')
+
+            if mode == 'ollama':
+                return 'ollama'
+            elif mode == 'cost_optimized':
+                # Use phase-specific models from override
+                return self.model_override['models'].get(phase, 'anthropic')
+            elif mode == 'single':
+                # Use single model for all phases
+                return self.model_override['model_type']
+
+        # Priority 2: Use config-based Ollama (FREE - local LLMs)
         if config.SWARM_USE_OLLAMA:
             return 'ollama'
 
-        # Mode 2: No optimization - use default model
+        # Priority 3: No optimization - use default model
         if not self.cost_optimized:
             return config.STRATEGY_AI_MODEL
 
-        # Mode 3: Cost optimization - use cheap cloud APIs
+        # Priority 4: Cost optimization - use cheap cloud APIs
         # Uses config.SWARM_MODELS mapping
         return config.SWARM_MODELS.get(phase, config.STRATEGY_AI_MODEL)
+
+    def get_ollama_model_name(self) -> str:
+        """Get Ollama model name from override or config"""
+        if self.model_override and self.model_override.get('mode') == 'ollama':
+            return self.model_override.get('ollama_model', 'llama3.2')
+        return config.SWARM_OLLAMA_MODEL
 
     def split_data_for_walkforward(self, df: pd.DataFrame, train_pct: float = 0.7) -> tuple:
         """
@@ -369,13 +398,15 @@ class SwarmRunner:
 
             # If using Ollama, pass the specific model name
             if model_type == 'ollama':
+                ollama_model = self.get_ollama_model_name()
                 builder = AIStrategyBuilder(
                     model_type=model_type,
-                    model_name=config.SWARM_OLLAMA_MODEL
+                    model_name=ollama_model
                 )
-                self.thread_print(f"Using Ollama model: {config.SWARM_OLLAMA_MODEL}", thread_id, "cyan")
+                self.thread_print(f"Using Ollama model: {ollama_model}", thread_id, "cyan")
             else:
                 builder = AIStrategyBuilder(model_type=model_type)
+                self.thread_print(f"Using model: {model_type}", thread_id, "cyan")
 
             strategy_result = builder.generate_strategy(idea)
             strategy_name = strategy_result['name']
@@ -592,8 +623,28 @@ class SwarmRunner:
         print(f"Ideas to process: {len(ideas)}")
         print(f"Max parallel threads: {self.max_threads}")
 
-        # Show AI mode
-        if config.SWARM_USE_OLLAMA:
+        # Show AI mode (check override first, then config)
+        if self.model_override:
+            mode = self.model_override.get('mode')
+
+            if mode == 'ollama':
+                ollama_model = self.model_override.get('ollama_model', 'llama3.2')
+                print(f"AI Mode: OLLAMA (FREE - Local) - Model: {ollama_model}")
+                print(f"  ⚡ Cost: $0.00 per strategy")
+                print(f"  ℹ️  Requires: ollama serve running")
+            elif mode == 'cost_optimized':
+                models = self.model_override.get('models', {})
+                print(f"AI Mode: COST OPTIMIZED (Cloud APIs)")
+                print(f"  Research: {models.get('research', 'deepseek')}")
+                print(f"  Backtest: {models.get('backtest', 'anthropic')}")
+                print(f"  Debug: {models.get('debug', 'deepseek')}")
+                print(f"  ⚡ Cost: ~$0.054 per strategy")
+            elif mode == 'single':
+                model_type = self.model_override.get('model_type', 'anthropic')
+                print(f"AI Mode: SINGLE MODEL - {model_type.upper()}")
+                print(f"  Using {model_type} for all phases")
+
+        elif config.SWARM_USE_OLLAMA:
             print(f"AI Mode: OLLAMA (FREE - Local) - Model: {config.SWARM_OLLAMA_MODEL}")
             print(f"  ⚡ Cost: $0.00 per strategy")
             print(f"  ℹ️  Requires: ollama serve running")
